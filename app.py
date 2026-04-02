@@ -32,7 +32,7 @@ def build_ffmpeg_command():
         "-hide_banner",
         "-loglevel", "warning",
 
-        # -------- VIDEO INPUT --------
+        # VIDEO INPUT
         "-thread_queue_size", "4096",
         "-f", "v4l2",
         "-input_format", "mjpeg",
@@ -40,14 +40,12 @@ def build_ffmpeg_command():
         "-video_size", f"{WIDTH}x{HEIGHT}",
         "-i", VIDEO_DEVICE,
 
-        # -------- AUDIO INPUT --------
+        # AUDIO INPUT
         "-thread_queue_size", "4096",
         "-f", "alsa",
-        "-ac", "1",
-        "-ar", "44100",
         "-i", AUDIO_DEVICE,
 
-        # -------- VIDEO ENCODE --------
+        # VIDEO ENCODE
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
@@ -56,12 +54,14 @@ def build_ffmpeg_command():
         "-r", str(FPS),
         "-g", str(FPS * 2),
 
-        # -------- AUDIO ENCODE --------
+        # AUDIO ENCODE
         "-c:a", "aac",
         "-b:a", AUDIO_BITRATE,
+        "-ar", "44100",
+        "-ac", "2",
         "-af", "aresample=async=1:first_pts=0",
 
-        # -------- OUTPUT --------
+        # OUTPUT
         "-movflags", "+faststart",
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
