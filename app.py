@@ -13,12 +13,13 @@ WIDTH = 1920
 HEIGHT = 1080
 FPS = 30
 
-VIDEO_BITRATE = "2500k"
+VIDEO_CRF = "23"
 AUDIO_BITRATE = "128k"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 process = None
+
 
 def build_ffmpeg_command():
     timestamp_pattern = os.path.join(
@@ -31,33 +32,37 @@ def build_ffmpeg_command():
         "-hide_banner",
         "-loglevel", "warning",
 
-        "-f", "v4l2",
+        # -------- VIDEO INPUT --------
         "-thread_queue_size", "4096",
+        "-f", "v4l2",
+        "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
         "-i", VIDEO_DEVICE,
 
-        "-f", "alsa",
+        # -------- AUDIO INPUT --------
         "-thread_queue_size", "4096",
+        "-f", "alsa",
+        "-ac", "1",
+        "-ar", "44100",
         "-i", AUDIO_DEVICE,
 
-        "-c:v", "mpeg4",
-        "-preset", "veryfast",
+        # -------- VIDEO ENCODE --------
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
         "-tune", "zerolatency",
+        "-crf", VIDEO_CRF,
         "-pix_fmt", "yuv420p",
         "-r", str(FPS),
-        "-b:v", VIDEO_BITRATE,
-        "-maxrate", VIDEO_BITRATE,
-        "-bufsize", "5000k",
         "-g", str(FPS * 2),
 
+        # -------- AUDIO ENCODE --------
         "-c:a", "aac",
         "-b:a", AUDIO_BITRATE,
-        "-ar", "44100",
-        "-ac", "1",
+        "-af", "aresample=async=1:first_pts=0",
 
+        # -------- OUTPUT --------
         "-movflags", "+faststart",
-
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
         "-reset_timestamps", "1",
@@ -67,6 +72,7 @@ def build_ffmpeg_command():
     ]
 
     return cmd
+
 
 def stop_ffmpeg(signum=None, frame=None):
     global process
@@ -81,6 +87,7 @@ def stop_ffmpeg(signum=None, frame=None):
 
     print("[INFO] FFmpeg to'xtadi.")
     sys.exit(0)
+
 
 def main():
     global process
@@ -100,6 +107,7 @@ def main():
 
     process = subprocess.Popen(cmd)
     process.wait()
+
 
 if __name__ == "__main__":
     main()
