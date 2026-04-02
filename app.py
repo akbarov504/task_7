@@ -10,7 +10,7 @@ VIDEO_DEVICE = "/dev/video25"
 
 # arecord -l bilan tekshirib to'g'ri device qo'yiladi
 # masalan: "hw:1,0" yoki "hw:2,0"
-AUDIO_DEVICE = "hw:1,0"
+AUDIO_DEVICE = "hw:2,0"
 
 OUTPUT_DIR = "records"
 SEGMENT_TIME = 10
