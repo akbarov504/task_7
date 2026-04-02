@@ -2,6 +2,7 @@ import subprocess
 import os
 import signal
 import sys
+from datetime import datetime
 
 VIDEO_DEVICE = "/dev/video25"
 AUDIO_DEVICE = "plughw:3,0"
@@ -16,40 +17,43 @@ FPS = 30
 VIDEO_CRF = "23"
 AUDIO_BITRATE = "128k"
 
+running = True
+current_process = None
+
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-process = None
+
+def build_output_filename():
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return os.path.join(OUTPUT_DIR, f"cam_{now}.mp4")
 
 
-def build_ffmpeg_command():
-    timestamp_pattern = os.path.join(
-        OUTPUT_DIR,
-        "cam_%Y-%m-%d_%H-%M-%S.mp4"
-    )
-
+def build_ffmpeg_command(output_file):
     cmd = [
         "ffmpeg",
         "-hide_banner",
         "-loglevel", "warning",
-
-        # umumiy timestamp fix
-        "-fflags", "+genpts",
-        "-max_interleave_delta", "0",
+        "-y",
 
         # VIDEO INPUT
-        "-thread_queue_size", "8192",
+        "-thread_queue_size", "4096",
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
-        "-use_wallclock_as_timestamps", "1",
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "8192",
+        "-thread_queue_size", "4096",
         "-f", "alsa",
-        "-use_wallclock_as_timestamps", "1",
         "-i", AUDIO_DEVICE,
+
+        # MAP
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+
+        # RECORD ONLY 10 SECONDS
+        "-t", str(SEGMENT_TIME),
 
         # VIDEO ENCODE
         "-c:v", "libx264",
@@ -65,54 +69,56 @@ def build_ffmpeg_command():
         "-b:a", AUDIO_BITRATE,
         "-ar", "48000",
         "-ac", "2",
-        "-af", "aresample=async=1000:min_hard_comp=0.100:first_pts=0",
 
         # OUTPUT
         "-movflags", "+faststart",
-        "-f", "segment",
-        "-segment_time", str(SEGMENT_TIME),
-        "-reset_timestamps", "1",
-        "-strftime", "1",
-
-        timestamp_pattern
+        output_file
     ]
-
     return cmd
 
 
-def stop_ffmpeg(signum=None, frame=None):
-    global process
+def stop_all(signum=None, frame=None):
+    global running, current_process
     print("\n[INFO] Yozuv to'xtatilmoqda...")
+    running = False
 
-    if process and process.poll() is None:
-        process.terminate()
+    if current_process and current_process.poll() is None:
+        current_process.terminate()
         try:
-            process.wait(timeout=5)
+            current_process.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            process.kill()
+            current_process.kill()
 
-    print("[INFO] FFmpeg to'xtadi.")
+    print("[INFO] Dastur to'xtadi.")
     sys.exit(0)
 
 
 def main():
-    global process
-
-    cmd = build_ffmpeg_command()
+    global current_process
 
     print("[INFO] Live recording boshlandi")
     print(f"[INFO] Kamera: {VIDEO_DEVICE}")
     print(f"[INFO] Mikrofon: {AUDIO_DEVICE}")
     print(f"[INFO] Papka: {OUTPUT_DIR}")
-    print(f"[INFO] Segment: {SEGMENT_TIME} sekund")
+    print(f"[INFO] Har fayl: {SEGMENT_TIME} sekund")
     print(f"[INFO] Format: {WIDTH}x{HEIGHT} @ {FPS}fps")
     print("[INFO] To'xtatish uchun CTRL+C bosing\n")
 
-    signal.signal(signal.SIGINT, stop_ffmpeg)
-    signal.signal(signal.SIGTERM, stop_ffmpeg)
+    signal.signal(signal.SIGINT, stop_all)
+    signal.signal(signal.SIGTERM, stop_all)
 
-    process = subprocess.Popen(cmd)
-    process.wait()
+    while running:
+        output_file = build_output_filename()
+        cmd = build_ffmpeg_command(output_file)
+
+        print(f"[INFO] Yozilyapti: {output_file}")
+        current_process = subprocess.Popen(cmd)
+        current_process.wait()
+
+        if current_process.returncode != 0 and running:
+            print("[WARNING] FFmpeg xato bilan tugadi, 1 sekunddan keyin qayta uriniladi...")
+            import time
+            time.sleep(1)
 
 
 if __name__ == "__main__":
