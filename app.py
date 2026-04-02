@@ -14,7 +14,6 @@ HEIGHT = 1080
 FPS = 30
 
 VIDEO_CRF = "23"
-AUDIO_BITRATE = "128k"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -24,7 +23,7 @@ process = None
 def build_ffmpeg_command():
     timestamp_pattern = os.path.join(
         OUTPUT_DIR,
-        "cam_%Y-%m-%d_%H-%M-%S.mp4"
+        "cam_%Y-%m-%d_%H-%M-%S.mkv"
     )
 
     cmd = [
@@ -32,7 +31,7 @@ def build_ffmpeg_command():
         "-hide_banner",
         "-loglevel", "warning",
 
-        # umumiy timing
+        # timing
         "-fflags", "+genpts",
         "-max_interleave_delta", "0",
 
@@ -55,7 +54,7 @@ def build_ffmpeg_command():
         "-map", "0:v:0",
         "-map", "1:a:0",
 
-        # VIDEO ENCODE
+        # VIDEO
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
@@ -63,26 +62,25 @@ def build_ffmpeg_command():
         "-pix_fmt", "yuv420p",
         "-r", str(FPS),
 
-        # har 10 sekund boshida keyframe majburiy
+        # segment aniq kesilishi uchun
         "-g", str(FPS * SEGMENT_TIME),
         "-keyint_min", str(FPS * SEGMENT_TIME),
         "-sc_threshold", "0",
         "-force_key_frames", f"expr:gte(t,n_forced*{SEGMENT_TIME})",
 
-        # AUDIO ENCODE
-        "-c:a", "aac",
-        "-b:a", AUDIO_BITRATE,
+        # AUDIO
+        # AAC o'rniga PCM: audio drop muammosini kamaytiradi
+        "-c:a", "pcm_s16le",
         "-ar", "48000",
         "-ac", "2",
         "-af", "aresample=async=1000:first_pts=0",
 
-        # SEGMENT OUTPUT
+        # SEGMENT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
         "-segment_time_delta", "0.05",
         "-reset_timestamps", "1",
         "-strftime", "1",
-        "-movflags", "+faststart",
 
         timestamp_pattern
     ]
