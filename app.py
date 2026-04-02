@@ -19,7 +19,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 process = None
 
-
 def build_ffmpeg_command():
     timestamp_pattern = os.path.join(
         OUTPUT_DIR,
@@ -29,23 +28,24 @@ def build_ffmpeg_command():
     cmd = [
         "ffmpeg",
         "-hide_banner",
-        "-loglevel", "warning",
+        # Muammo qayerdaligini ko'rish uchun "warning" o'rniga "info" qilib turamiz
+        "-loglevel", "info",
 
         # timing
         "-fflags", "+genpts",
 
         # VIDEO INPUT
-        # Queue hajmini kichraytiramiz, juda katta queue xotirada tiqilib qolishiga olib keladi
-        "-thread_queue_size", "1024", 
+        "-thread_queue_size", "4096", # Kichraytirilgan, lekin yetarli bufer
+        "-use_wallclock_as_timestamps", "1", # Qaytarib qo'shildi (Sinxronizatsiya uchun muhim)
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
-        # use_wallclock_as_timestamps ni olib tashlaymiz (kamera o'z vaqtini bersin)
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "1024",
+        "-thread_queue_size", "4096",
+        "-use_wallclock_as_timestamps", "1", # Qaytarib qo'shildi
         "-f", "alsa",
         "-i", AUDIO_DEVICE,
 
@@ -61,34 +61,33 @@ def build_ffmpeg_command():
         "-pix_fmt", "yuv420p",
         "-r", str(FPS),
 
-        # segment aniq kesilishi uchun
+        # Segment aniq kesilishi uchun
         "-g", str(FPS * SEGMENT_TIME),
         "-keyint_min", str(FPS * SEGMENT_TIME),
         "-sc_threshold", "0",
         "-force_key_frames", f"expr:gte(t,n_forced*{SEGMENT_TIME})",
 
         # AUDIO
-        # AAC formatiga qaytamiz. MKV/MP4 segmentlarida PCM (pcm_s16le) ba'zan 
-        # segment boshida/oxirida muammo qilib, ovozni tushirib yuboradi.
+        # AAC formatini ishlatamiz, chunki PCM ba'zan MKV ni kesishda uzilishlar qiladi
         "-c:a", "aac",
-        "-b:a", "128k",     # Audio sifati
+        "-b:a", "128k",
         "-ar", "48000",
         "-ac", "2",
-        # aresample=async=1 qoldiramiz (eng stabil variant)
-        "-af", "aresample=async=1", 
+        # Asl nusxadagi aresample ni qaytaramiz, chunki wallclock ishlatilganda bu yaxshi ishlaydi
+        "-af", "aresample=async=1000",
 
         # SEGMENT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
+        "-segment_time_delta", "0.05",
         "-reset_timestamps", "1",
-        "-segment_format", "matroska", # MKV formatini aniq ko'rsatamiz
+        "-segment_format", "matroska",
         "-strftime", "1",
 
         timestamp_pattern
     ]
 
     return cmd
-
 
 def stop_ffmpeg(signum=None, frame=None):
     global process
@@ -104,7 +103,6 @@ def stop_ffmpeg(signum=None, frame=None):
     print("[INFO] FFmpeg to'xtadi.")
     sys.exit(0)
 
-
 def main():
     global process
 
@@ -115,15 +113,13 @@ def main():
     print(f"[INFO] Mikrofon: {AUDIO_DEVICE}")
     print(f"[INFO] Papka: {OUTPUT_DIR}")
     print(f"[INFO] Segment: {SEGMENT_TIME} sekund")
-    print(f"[INFO] Format: {WIDTH}x{HEIGHT} @ {FPS}fps")
-    print("[INFO] To'xtatish uchun CTRL+C bosing\n")
+    print(f"[INFO] To'xtatish uchun CTRL+C bosing\n")
 
     signal.signal(signal.SIGINT, stop_ffmpeg)
     signal.signal(signal.SIGTERM, stop_ffmpeg)
 
     process = subprocess.Popen(cmd)
     process.wait()
-
 
 if __name__ == "__main__":
     main()
