@@ -6,7 +6,7 @@ import sys
 # =========================
 # SOZLAMALAR
 # =========================
-VIDEO_DEVICE = "/dev/video0"
+VIDEO_DEVICE = "/dev/video25"
 
 # arecord -l bilan tekshirib to'g'ri device qo'yiladi
 # masalan: "hw:1,0" yoki "hw:2,0"
