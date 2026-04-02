@@ -13,8 +13,6 @@ WIDTH = 1920
 HEIGHT = 1080
 FPS = 30
 
-VIDEO_CRF = "23"
-
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 process = None
@@ -33,7 +31,7 @@ def build_ffmpeg_command():
         "-fflags", "+genpts",
 
         # VIDEO INPUT
-        "-thread_queue_size", "10240", # Disk qotsa ham video yo'qolmaydi
+        "-thread_queue_size", "2048",
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
@@ -41,29 +39,18 @@ def build_ffmpeg_command():
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "10240", # Audio uzilmasligi uchun KATTA buffer
+        "-thread_queue_size", "2048",
         "-f", "alsa",
         "-channels", "2",
         "-sample_rate", "48000",
         "-i", AUDIO_DEVICE,
 
-        # map
         "-map", "0:v:0",
         "-map", "1:a:0",
-        "-max_muxing_queue_size", "4096",
+        "-max_muxing_queue_size", "1024",
 
-        # VIDEO OUTPUT
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-crf", VIDEO_CRF,
-        "-pix_fmt", "yuv420p",
-        "-r", str(FPS),
-
-        "-g", str(FPS * SEGMENT_TIME),
-        "-keyint_min", str(FPS * SEGMENT_TIME),
-        "-sc_threshold", "0",
-        "-force_key_frames", f"expr:gte(t,n_forced*{SEGMENT_TIME})",
+        # VIDEO OUTPUT (Copy rejim - Protsessor 0% qiynaladi)
+        "-c:v", "copy",
 
         # AUDIO OUTPUT
         "-c:a", "aac",
@@ -73,7 +60,6 @@ def build_ffmpeg_command():
         # SEGMENT OUTPUT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
-        # DIQQAT: -reset_timestamps olib tashlandi! (Audio sinxronizatsiya buzilmasligi uchun)
         "-segment_format", "matroska",
         "-strftime", "1",
 
@@ -101,7 +87,7 @@ def main():
 
     cmd = build_ffmpeg_command()
 
-    print("[INFO] Live recording boshlandi")
+    print("[INFO] Live recording boshlandi (COPY MODE)")
     print(f"[INFO] Kamera: {VIDEO_DEVICE}")
     print(f"[INFO] Mikrofon: {AUDIO_DEVICE}")
     print(f"[INFO] Papka: {OUTPUT_DIR}")
