@@ -6,7 +6,7 @@ import time
 
 # --- OUT (Tashqi) qurilmalar ---
 OUT_VIDEO_DEVICE = "/dev/video25"
-OUT_AUDIO_DEVICE = "hw:3,0" 
+OUT_AUDIO_DEVICE = "hw:3,0"
 
 # --- IN (Ichki) qurilmalar ---
 IN_VIDEO_DEVICE = "/dev/video29"
@@ -24,8 +24,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Ikkala processni saqlash uchun ro'yxat
 processes = []
 
-def build_ffmpeg_command(video_device, audio_device, prefix):
-    # Fayl nomi preffiks bilan (Masalan: OUT_2023... yoki IN_2023...) MP4 formatida
+def build_ffmpeg_command(video_device, audio_device, channels, sample_rate, prefix):
     timestamp_pattern = os.path.join(
         OUTPUT_DIR,
         f"{prefix}_%Y-%m-%d_%H-%M-%S.mp4"
@@ -33,9 +32,9 @@ def build_ffmpeg_command(video_device, audio_device, prefix):
 
     cmd = [
         "ffmpeg",
+        "-nostdin",           # <--- SHU BUYRUQ QO'SHILDI (Ikkala FFmpeg urishmasligi uchun)
         "-hide_banner",
         "-loglevel", "warning",
-
         "-fflags", "+genpts",
 
         # VIDEO INPUT
@@ -49,15 +48,15 @@ def build_ffmpeg_command(video_device, audio_device, prefix):
         # AUDIO INPUT
         "-thread_queue_size", "2048",
         "-f", "alsa",
-        "-channels", "2",
-        "-sample_rate", "48000",
+        "-channels", channels,
+        "-sample_rate", sample_rate,
         "-i", audio_device,
 
         "-map", "0:v:0",
         "-map", "1:a:0",
         "-max_muxing_queue_size", "1024",
 
-        # VIDEO OUTPUT (Copy rejim - Protsessor 0% qiynaladi)
+        # VIDEO OUTPUT
         "-c:v", "copy",
 
         # AUDIO OUTPUT
@@ -65,7 +64,7 @@ def build_ffmpeg_command(video_device, audio_device, prefix):
         "-b:a", "128k",
         "-af", "aresample=async=1",
 
-        # SEGMENT OUTPUT (MP4 formatiga o'zgartirildi)
+        # SEGMENT OUTPUT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
         "-segment_format", "mp4",
@@ -73,7 +72,6 @@ def build_ffmpeg_command(video_device, audio_device, prefix):
 
         timestamp_pattern
     ]
-
     return cmd
 
 def stop_ffmpeg(signum=None, frame=None):
@@ -98,9 +96,9 @@ def main():
     global processes
 
     # 1. OUT buyrug'ini tuzamiz
-    cmd_out = build_ffmpeg_command(OUT_VIDEO_DEVICE, OUT_AUDIO_DEVICE, "OUT")
+    cmd_out = build_ffmpeg_command(OUT_VIDEO_DEVICE, OUT_AUDIO_DEVICE, "2", "48000", "OUT")
     # 2. IN buyrug'ini tuzamiz
-    cmd_in = build_ffmpeg_command(IN_VIDEO_DEVICE, IN_AUDIO_DEVICE, "IN")
+    cmd_in = build_ffmpeg_command(IN_VIDEO_DEVICE, IN_AUDIO_DEVICE, "2", "48000", "IN")
 
     print("[INFO] Live recording boshlandi (COPY MODE | MP4)")
     print(f"[INFO] 1-Kamera (OUT): {OUT_VIDEO_DEVICE} | Mic: {OUT_AUDIO_DEVICE}")
