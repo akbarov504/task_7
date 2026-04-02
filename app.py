@@ -33,21 +33,20 @@ def build_ffmpeg_command():
 
         # timing
         "-fflags", "+genpts",
-        "-max_interleave_delta", "0",
 
         # VIDEO INPUT
-        "-thread_queue_size", "8192",
+        # Queue hajmini kichraytiramiz, juda katta queue xotirada tiqilib qolishiga olib keladi
+        "-thread_queue_size", "1024", 
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
-        "-use_wallclock_as_timestamps", "1",
+        # use_wallclock_as_timestamps ni olib tashlaymiz (kamera o'z vaqtini bersin)
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "8192",
+        "-thread_queue_size", "1024",
         "-f", "alsa",
-        "-use_wallclock_as_timestamps", "1",
         "-i", AUDIO_DEVICE,
 
         # map
@@ -69,17 +68,20 @@ def build_ffmpeg_command():
         "-force_key_frames", f"expr:gte(t,n_forced*{SEGMENT_TIME})",
 
         # AUDIO
-        # AAC o'rniga PCM: audio drop muammosini kamaytiradi
-        "-c:a", "pcm_s16le",
+        # AAC formatiga qaytamiz. MKV/MP4 segmentlarida PCM (pcm_s16le) ba'zan 
+        # segment boshida/oxirida muammo qilib, ovozni tushirib yuboradi.
+        "-c:a", "aac",
+        "-b:a", "128k",     # Audio sifati
         "-ar", "48000",
         "-ac", "2",
-        "-af", "aresample=async=1000:first_pts=0",
+        # aresample=async=1 qoldiramiz (eng stabil variant)
+        "-af", "aresample=async=1", 
 
         # SEGMENT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
-        "-segment_time_delta", "0.05",
         "-reset_timestamps", "1",
+        "-segment_format", "matroska", # MKV formatini aniq ko'rsatamiz
         "-strftime", "1",
 
         timestamp_pattern
