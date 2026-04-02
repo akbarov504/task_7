@@ -4,7 +4,6 @@ import signal
 import sys
 
 VIDEO_DEVICE = "/dev/video25"
-# plughw o'rniga to'g'ridan-to'g'ri hw (hardware) ishlatamiz
 AUDIO_DEVICE = "hw:3,0" 
 
 OUTPUT_DIR = "records"
@@ -29,14 +28,12 @@ def build_ffmpeg_command():
     cmd = [
         "ffmpeg",
         "-hide_banner",
-        "-loglevel", "info",
+        "-loglevel", "warning",
 
-        # timing
         "-fflags", "+genpts",
 
         # VIDEO INPUT
-        "-thread_queue_size", "4096",
-        "-use_wallclock_as_timestamps", "1",
+        "-thread_queue_size", "10240", # Disk qotsa ham video yo'qolmaydi
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
@@ -44,10 +41,8 @@ def build_ffmpeg_command():
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "4096",
-        "-use_wallclock_as_timestamps", "1",
+        "-thread_queue_size", "10240", # Audio uzilmasligi uchun KATTA buffer
         "-f", "alsa",
-        # Mikrofoningiz arecord'da bergan aniq parametrlarini shu yerda kiritamiz:
         "-channels", "2",
         "-sample_rate", "48000",
         "-i", AUDIO_DEVICE,
@@ -55,9 +50,7 @@ def build_ffmpeg_command():
         # map
         "-map", "0:v:0",
         "-map", "1:a:0",
-
-        # MUXING QUEUE: FFmpeg videoni kesayotganda audio streamni tashlab yubormasligi uchun bufer qo'shamiz
-        "-max_muxing_queue_size", "1024",
+        "-max_muxing_queue_size", "4096",
 
         # VIDEO OUTPUT
         "-c:v", "libx264",
@@ -67,7 +60,6 @@ def build_ffmpeg_command():
         "-pix_fmt", "yuv420p",
         "-r", str(FPS),
 
-        # Segment aniq kesilishi uchun video kalitlari (keyframes)
         "-g", str(FPS * SEGMENT_TIME),
         "-keyint_min", str(FPS * SEGMENT_TIME),
         "-sc_threshold", "0",
@@ -76,14 +68,12 @@ def build_ffmpeg_command():
         # AUDIO OUTPUT
         "-c:a", "aac",
         "-b:a", "128k",
-        # async=1 audio va videoni yumshoq tarzda sinxron qiladi (kesish jarayoniga xalaqit bermaydi)
         "-af", "aresample=async=1",
 
         # SEGMENT OUTPUT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
-        "-segment_time_delta", "0.05",
-        "-reset_timestamps", "1",
+        # DIQQAT: -reset_timestamps olib tashlandi! (Audio sinxronizatsiya buzilmasligi uchun)
         "-segment_format", "matroska",
         "-strftime", "1",
 
