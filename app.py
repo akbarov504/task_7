@@ -4,7 +4,7 @@ import signal
 import sys
 
 VIDEO_DEVICE = "/dev/video25"
-AUDIO_DEVICE = "hw:3,0"
+AUDIO_DEVICE = "plughw:3,0"
 
 OUTPUT_DIR = "records"
 SEGMENT_TIME = 10
@@ -32,17 +32,23 @@ def build_ffmpeg_command():
         "-hide_banner",
         "-loglevel", "warning",
 
+        # umumiy timestamp fix
+        "-fflags", "+genpts",
+        "-max_interleave_delta", "0",
+
         # VIDEO INPUT
-        "-thread_queue_size", "4096",
+        "-thread_queue_size", "8192",
         "-f", "v4l2",
         "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
+        "-use_wallclock_as_timestamps", "1",
         "-i", VIDEO_DEVICE,
 
         # AUDIO INPUT
-        "-thread_queue_size", "4096",
+        "-thread_queue_size", "8192",
         "-f", "alsa",
+        "-use_wallclock_as_timestamps", "1",
         "-i", AUDIO_DEVICE,
 
         # VIDEO ENCODE
@@ -57,9 +63,9 @@ def build_ffmpeg_command():
         # AUDIO ENCODE
         "-c:a", "aac",
         "-b:a", AUDIO_BITRATE,
-        "-ar", "44100",
+        "-ar", "48000",
         "-ac", "2",
-        "-af", "aresample=async=1:first_pts=0",
+        "-af", "aresample=async=1000:min_hard_comp=0.100:first_pts=0",
 
         # OUTPUT
         "-movflags", "+faststart",
