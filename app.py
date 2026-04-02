@@ -4,7 +4,7 @@ import signal
 import sys
 
 VIDEO_DEVICE = "/dev/video25"
-AUDIO_DEVICE = "plughw:3,0"
+AUDIO_DEVICE = "plughw:1,0"
 
 OUTPUT_DIR = "records"
 SEGMENT_TIME = 10
@@ -35,7 +35,7 @@ def build_ffmpeg_command():
 
         "-thread_queue_size", "8192",
         "-f", "v4l2",
-        "-input_format", "mjpeg",
+        "-input_format", "h264",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
         "-use_wallclock_as_timestamps", "1",
@@ -49,7 +49,7 @@ def build_ffmpeg_command():
         "-map", "0:v:0",
         "-map", "1:a:0",
 
-        "-c:v", "libx264",
+        "-c:v", "copy",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
         "-crf", VIDEO_CRF,
