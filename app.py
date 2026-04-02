@@ -4,7 +4,7 @@ import signal
 import sys
 
 VIDEO_DEVICE = "/dev/video25"
-AUDIO_DEVICE = "plughw:1,0"
+AUDIO_DEVICE = "plughw:3,0"
 
 OUTPUT_DIR = "records"
 SEGMENT_TIME = 10
