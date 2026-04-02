@@ -11,7 +11,7 @@ SEGMENT_TIME = 10
 
 WIDTH = 1920
 HEIGHT = 1080
-FPS = 25
+FPS = 30
 
 VIDEO_CRF = "24"
 AUDIO_BITRATE = "128k"
@@ -22,7 +22,7 @@ process = None
 def build_ffmpeg_command():
     timestamp_pattern = os.path.join(
         OUTPUT_DIR,
-        "cam_%Y-%m-%d_%H-%M-%S.mkv"
+        "cam_%Y-%m-%d_%H-%M-%S.mp4"
     )
 
     return [
@@ -35,7 +35,7 @@ def build_ffmpeg_command():
 
         "-thread_queue_size", "8192",
         "-f", "v4l2",
-        "-input_format", "h264",
+        "-input_format", "mjpeg",
         "-framerate", str(FPS),
         "-video_size", f"{WIDTH}x{HEIGHT}",
         "-use_wallclock_as_timestamps", "1",
