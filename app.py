@@ -4,11 +4,11 @@ import signal
 import sys
 import time
 
-OUT_VIDEO_DEVICE = "/dev/video25"
-OUT_AUDIO_DEVICE = "hw:3,0"
+OUT_VIDEO_DEVICE = "/dev/video29"
+OUT_AUDIO_DEVICE = "hw:4,0"
 
-IN_VIDEO_DEVICE = "/dev/video29"
-IN_AUDIO_DEVICE = "hw:4,0" 
+IN_VIDEO_DEVICE = "/dev/video25"
+IN_AUDIO_DEVICE = "hw:3,0" 
 
 OUTPUT_DIR = "records"
 SEGMENT_TIME = 10
