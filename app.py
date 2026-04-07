@@ -4,11 +4,9 @@ import signal
 import sys
 import time
 
-# --- OUT (Tashqi) qurilmalar ---
 OUT_VIDEO_DEVICE = "/dev/video25"
 OUT_AUDIO_DEVICE = "hw:3,0"
 
-# --- IN (Ichki) qurilmalar ---
 IN_VIDEO_DEVICE = "/dev/video29"
 IN_AUDIO_DEVICE = "hw:4,0" 
 
@@ -20,8 +18,6 @@ HEIGHT = 1080
 FPS = 30
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# Ikkala processni saqlash uchun ro'yxat
 processes = []
 
 def build_ffmpeg_command(video_device, audio_device, channels, sample_rate, prefix):
@@ -32,12 +28,11 @@ def build_ffmpeg_command(video_device, audio_device, channels, sample_rate, pref
 
     cmd = [
         "ffmpeg",
-        "-nostdin",           # <--- SHU BUYRUQ QO'SHILDI (Ikkala FFmpeg urishmasligi uchun)
+        "-nostdin",
         "-hide_banner",
         "-loglevel", "warning",
         "-fflags", "+genpts",
 
-        # VIDEO INPUT
         "-thread_queue_size", "2048",
         "-f", "v4l2",
         "-input_format", "mjpeg",
@@ -45,7 +40,6 @@ def build_ffmpeg_command(video_device, audio_device, channels, sample_rate, pref
         "-video_size", f"{WIDTH}x{HEIGHT}",
         "-i", video_device,
 
-        # AUDIO INPUT
         "-thread_queue_size", "2048",
         "-f", "alsa",
         "-channels", channels,
@@ -56,15 +50,12 @@ def build_ffmpeg_command(video_device, audio_device, channels, sample_rate, pref
         "-map", "1:a:0",
         "-max_muxing_queue_size", "1024",
 
-        # VIDEO OUTPUT
         "-c:v", "copy",
 
-        # AUDIO OUTPUT
         "-c:a", "aac",
         "-b:a", "128k",
         "-af", "aresample=async=1",
 
-        # SEGMENT OUTPUT
         "-f", "segment",
         "-segment_time", str(SEGMENT_TIME),
         "-segment_format", "mp4",
@@ -82,7 +73,6 @@ def stop_ffmpeg(signum=None, frame=None):
         if p and p.poll() is None:
             p.terminate()
             
-    # Jarayonlar yopilishini biroz kutamiz
     time.sleep(2)
     
     for p in processes:
@@ -95,9 +85,7 @@ def stop_ffmpeg(signum=None, frame=None):
 def main():
     global processes
 
-    # 1. OUT buyrug'ini tuzamiz
     cmd_out = build_ffmpeg_command(OUT_VIDEO_DEVICE, OUT_AUDIO_DEVICE, "2", "48000", "OUT")
-    # 2. IN buyrug'ini tuzamiz
     cmd_in = build_ffmpeg_command(IN_VIDEO_DEVICE, IN_AUDIO_DEVICE, "2", "48000", "IN")
 
     print("[INFO] Live recording boshlandi (COPY MODE | MP4)")
@@ -107,18 +95,15 @@ def main():
     print(f"[INFO] Segment: {SEGMENT_TIME} sekund")
     print("[INFO] To'xtatish uchun CTRL+C bosing\n")
 
-    # Dasturni xavfsiz to'xtatish uchun signallar
     signal.signal(signal.SIGINT, stop_ffmpeg)
     signal.signal(signal.SIGTERM, stop_ffmpeg)
 
-    # Ikkala kamerani bir vaqtda ishga tushiramiz
     process_out = subprocess.Popen(cmd_out)
     process_in = subprocess.Popen(cmd_in)
     
     processes.append(process_out)
     processes.append(process_in)
 
-    # Dastur yopilib ketmasligi uchun kutib turamiz
     process_out.wait()
     process_in.wait()
 
